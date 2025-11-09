@@ -1,13 +1,14 @@
+import { config } from '@/lib/config/config';
+
 /**
- * Client-side API request function that calls Next.js API routes
- * These routes then proxy to the Golang backend
+ * Server-side API client that calls the Golang backend directly
+ * This should only be used in Next.js API routes and server components
  */
-export async function apiRequest<T>(
+export async function serverApiRequest<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  // Use Next.js API routes instead of calling Golang backend directly
-  const url = `/api${endpoint}`;
+  const url = `${config.apiUrl}${endpoint}`;
   
   const response = await fetch(url, {
     ...options,
@@ -19,7 +20,7 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.error || error.message || `HTTP error! status: ${response.status}`);
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
 
   return response.json();
