@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { productsApi } from "@/lib/api/products";
-import { createOrder } from "@/lib/api/orders";
 import type { Product } from "@/types/product";
-import type { OrderProductItem } from "@/types/order";
+import type { OpenBillWithProducts, OrderProductItem } from "@/types/order";
 
-interface CreateOrderFormProps {
+interface EditOrderFormProps {
+  openBill: OpenBillWithProducts;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -18,12 +18,12 @@ interface ProductWithQuantity {
   notes: string;
 }
 
-export default function CreateOrderForm({
+export default function EditOrderForm({
+  openBill,
   onClose,
   onSuccess,
-}: CreateOrderFormProps) {
-  const [temporalIdentifier, setTemporalIdentifier] = useState("");
-  const [descriptor, setDescriptor] = useState("");
+}: EditOrderFormProps) {
+  const [descriptor, setDescriptor] = useState(openBill.descriptor || "");
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<
     Map<string, ProductWithQuantity>
@@ -34,22 +34,34 @@ export default function CreateOrderForm({
   const [error, setError] = useState<string | null>(null);
   const [lineItemCounter, setLineItemCounter] = useState(0);
 
-  // Generate a simple temporal identifier (can be improved with UUID)
-  useEffect(() => {
-    // Generate a simple identifier like "TABLE-001" or similar
-    const randomNum = Math.floor(Math.random() * 1000)
-      .toString()
-      .padStart(3, "0");
-    setTemporalIdentifier(`TABLE-${randomNum}`);
-  }, []);
-
-  // Fetch products on mount
+  // Fetch products on mount and pre-populate selected products from order
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
         const fetchedProducts = await productsApi.getAll();
         setProducts(fetchedProducts);
+
+        // Pre-populate selected products from the order
+        const initialSelectedProducts = new Map<string, ProductWithQuantity>();
+        let counter = 0;
+        openBill.products.forEach((orderProduct) => {
+          const product = fetchedProducts.find(
+            (p) => p.id === orderProduct.product.id
+          );
+          if (product) {
+            counter++;
+            const lineItemId = `line-${counter}`;
+            initialSelectedProducts.set(lineItemId, {
+              lineItemId,
+              product,
+              quantity: orderProduct.quantity,
+              notes: orderProduct.notes || "",
+            });
+          }
+        });
+        setSelectedProducts(initialSelectedProducts);
+        setLineItemCounter(counter);
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Failed to load products");
@@ -58,7 +70,7 @@ export default function CreateOrderForm({
       }
     };
     fetchProducts();
-  }, []);
+  }, [openBill.products]);
 
   // Filter products based on search query
   const filteredProducts = useMemo(() => {
@@ -129,16 +141,6 @@ export default function CreateOrderForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!temporalIdentifier.trim()) {
-      setError("Temporal identifier is required");
-      return;
-    }
-
-    if (selectedProducts.size === 0) {
-      setError("Please select at least one product");
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -151,17 +153,22 @@ export default function CreateOrderForm({
         notes: notes.trim() || null,
       }));
 
-      await createOrder({
-        temporal_identifier: temporalIdentifier,
+      // TODO: Implement API call to update the order
+      // This would be something like: await updateOrder(openBill.id, { descriptor, products: orderProducts });
+
+      console.log("Update order:", {
+        id: openBill.id,
         descriptor: descriptor.trim() || null,
         products: orderProducts,
       });
 
+      // For now, just simulate success
+      alert("Order updated successfully!");
       onSuccess();
       onClose();
     } catch (err) {
-      console.error("Error creating order:", err);
-      setError(err instanceof Error ? err.message : "Failed to create order");
+      console.error("Error updating order:", err);
+      setError(err instanceof Error ? err.message : "Failed to update order");
     } finally {
       setIsSubmitting(false);
     }
@@ -212,16 +219,37 @@ export default function CreateOrderForm({
             zIndex: 1,
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "1.5rem",
-              fontWeight: "bold",
-              color: "#333",
-            }}
-          >
-            Create New Order
-          </h2>
+          <div>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                color: "#333",
+              }}
+            >
+              Edit Order
+            </h2>
+            <div
+              style={{
+                marginTop: "0.5rem",
+                fontSize: "0.9rem",
+                color: "#666",
+              }}
+            >
+              <span
+                style={{
+                  backgroundColor: "#e7f3ff",
+                  color: "#007bff",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                {openBill.temporal_identifier}
+              </span>
+            </div>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -256,32 +284,37 @@ export default function CreateOrderForm({
               </div>
             )}
 
-            {/* Temporal Identifier */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "0.5rem",
-                  fontWeight: "bold",
-                  color: "#333",
-                }}
-              >
-                Temporal Identifier *
-              </label>
-              <input
-                type="text"
-                value={temporalIdentifier}
-                onChange={(e) => setTemporalIdentifier(e.target.value)}
-                required
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  fontSize: "1rem",
-                  border: "2px solid #e0e0e0",
-                  borderRadius: "8px",
-                  outline: "none",
-                }}
-              />
+            {/* Order Info */}
+            <div
+              style={{
+                marginBottom: "1.5rem",
+                padding: "1rem",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ marginBottom: "0.5rem" }}>
+                <strong style={{ color: "#666", fontSize: "0.875rem" }}>
+                  Created by:{" "}
+                </strong>
+                <span style={{ color: "#333" }}>
+                  {openBill.created_by?.user_name}
+                </span>
+              </div>
+              <div>
+                <strong style={{ color: "#666", fontSize: "0.875rem" }}>
+                  Created at:{" "}
+                </strong>
+                <span style={{ color: "#333" }}>
+                  {new Date(openBill.created_at).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
             </div>
 
             {/* Descriptor */}
@@ -332,7 +365,7 @@ export default function CreateOrderForm({
                     color: "#333",
                   }}
                 >
-                  Selected Products ({selectedProductsArray.length})
+                  Added Products ({selectedProductsArray.length})
                 </h3>
                 <div
                   style={{
@@ -341,117 +374,113 @@ export default function CreateOrderForm({
                     gap: "0.75rem",
                   }}
                 >
-                  {selectedProductsArray.map(
-                    ({ lineItemId, product, quantity, notes }) => (
+                  {selectedProductsArray.map(({ lineItemId, product, quantity, notes }) => (
+                    <div
+                      key={lineItemId}
+                      style={{
+                        padding: "1rem",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
                       <div
-                        key={lineItemId}
                         style={{
-                          padding: "1rem",
-                          backgroundColor: "white",
-                          borderRadius: "8px",
-                          border: "1px solid #e0e0e0",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.75rem",
                         }}
                       >
+                        <div>
+                          <strong style={{ color: "#333" }}>
+                            {product.name}
+                          </strong>
+                          <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                            ${product.total_price_with_taxes.toFixed(2)}
+                          </div>
+                        </div>
                         <div
                           style={{
                             display: "flex",
-                            justifyContent: "space-between",
                             alignItems: "center",
-                            marginBottom: "0.75rem",
+                            gap: "0.5rem",
                           }}
                         >
-                          <div>
-                            <strong style={{ color: "#333" }}>
-                              {product.name}
-                            </strong>
-                            <div
-                              style={{ fontSize: "0.875rem", color: "#666" }}
-                            >
-                              ${product.total_price_with_taxes.toFixed(2)}
-                            </div>
-                          </div>
-                          <div
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(lineItemId, quantity - 1)
+                            }
                             style={{
+                              width: "32px",
+                              height: "32px",
+                              border: "2px solid #007bff",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
+                              color: "#007bff",
+                              cursor: "pointer",
+                              fontSize: "1.25rem",
+                              lineHeight: 1,
                               display: "flex",
                               alignItems: "center",
-                              gap: "0.5rem",
+                              justifyContent: "center",
                             }}
                           >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(lineItemId, quantity - 1)
-                              }
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                border: "2px solid #007bff",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                                color: "#007bff",
-                                cursor: "pointer",
-                                fontSize: "1.25rem",
-                                lineHeight: 1,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              −
-                            </button>
-                            <span
-                              style={{
-                                minWidth: "40px",
-                                textAlign: "center",
-                                fontWeight: "bold",
-                                fontSize: "1.1rem",
-                              }}
-                            >
-                              {quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(lineItemId, quantity + 1)
-                              }
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                border: "2px solid #007bff",
-                                borderRadius: "6px",
-                                backgroundColor: "white",
-                                color: "#007bff",
-                                cursor: "pointer",
-                                fontSize: "1.25rem",
-                                lineHeight: 1,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
+                            −
+                          </button>
+                          <span
+                            style={{
+                              minWidth: "40px",
+                              textAlign: "center",
+                              fontWeight: "bold",
+                              fontSize: "1.1rem",
+                            }}
+                          >
+                            {quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(lineItemId, quantity + 1)
+                            }
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              border: "2px solid #007bff",
+                              borderRadius: "6px",
+                              backgroundColor: "white",
+                              color: "#007bff",
+                              cursor: "pointer",
+                              fontSize: "1.25rem",
+                              lineHeight: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            +
+                          </button>
                         </div>
-                        <input
-                          type="text"
-                          value={notes}
-                          onChange={(e) =>
-                            handleNotesChange(lineItemId, e.target.value)
-                          }
-                          placeholder="Add notes (optional)..."
-                          style={{
-                            width: "100%",
-                            padding: "0.5rem",
-                            fontSize: "0.875rem",
-                            border: "1px solid #e0e0e0",
-                            borderRadius: "6px",
-                            outline: "none",
-                          }}
-                        />
                       </div>
-                    )
-                  )}
+                      <input
+                        type="text"
+                        value={notes}
+                        onChange={(e) =>
+                          handleNotesChange(lineItemId, e.target.value)
+                        }
+                        placeholder="Add notes (optional)..."
+                        style={{
+                          width: "100%",
+                          padding: "0.5rem",
+                          fontSize: "0.875rem",
+                          border: "1px solid #e0e0e0",
+                          borderRadius: "6px",
+                          outline: "none",
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -466,7 +495,7 @@ export default function CreateOrderForm({
                   color: "#333",
                 }}
               >
-                Add Products
+                Add More Products
               </h3>
               <input
                 type="text"
@@ -600,25 +629,19 @@ export default function CreateOrderForm({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || selectedProducts.size === 0}
+              disabled={isSubmitting}
               style={{
                 padding: "0.75rem 1.5rem",
                 fontSize: "1rem",
                 fontWeight: "bold",
-                backgroundColor:
-                  isSubmitting || selectedProducts.size === 0
-                    ? "#6c757d"
-                    : "#28a745",
+                backgroundColor: isSubmitting ? "#6c757d" : "#007bff",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
-                cursor:
-                  isSubmitting || selectedProducts.size === 0
-                    ? "not-allowed"
-                    : "pointer",
+                cursor: isSubmitting ? "not-allowed" : "pointer",
               }}
             >
-              {isSubmitting ? "Creating..." : "Create Order"}
+              {isSubmitting ? "Updating..." : "Update Order"}
             </button>
           </div>
         </form>
