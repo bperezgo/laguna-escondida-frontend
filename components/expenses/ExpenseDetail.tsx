@@ -1,34 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { PurchaseEntry } from "@/types/purchaseEntry";
-import { purchaseEntriesApi } from "@/lib/api/purchaseEntries";
+import type { Expense } from "@/types/expense";
+import { expensesApi } from "@/lib/api/expenses";
 
-interface PurchaseEntryDetailProps {
-  entryId: string;
+interface ExpenseDetailProps {
+  expenseId: string;
   onClose: () => void;
 }
 
-export default function PurchaseEntryDetail({
-  entryId,
+export default function ExpenseDetail({
+  expenseId,
   onClose,
-}: PurchaseEntryDetailProps) {
-  const [entry, setEntry] = useState<PurchaseEntry | null>(null);
+}: ExpenseDetailProps) {
+  const [expense, setExpense] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadEntry();
-  }, [entryId]);
+    loadExpense();
+  }, [expenseId]);
 
-  const loadEntry = async () => {
+  const loadExpense = async () => {
     try {
       setLoading(true);
       setError("");
-      const data = await purchaseEntriesApi.getById(entryId);
-      setEntry(data);
+      const data = await expensesApi.getById(expenseId);
+      setExpense(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar la entrada");
+      setError(err instanceof Error ? err.message : "Error al cargar el gasto");
     } finally {
       setLoading(false);
     }
@@ -49,6 +49,27 @@ export default function PurchaseEntryDetail({
       month: "long",
       day: "numeric",
     });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getCategoryColor = (code?: string) => {
+    const colors: Record<string, string> = {
+      indirect_cost: "#6366f1",
+      expense: "#8b5cf6",
+      investment: "#10b981",
+      rent: "#f59e0b",
+      service: "#3b82f6",
+    };
+    return colors[code || ""] || "#64748b";
   };
 
   return (
@@ -72,7 +93,7 @@ export default function PurchaseEntryDetail({
           backgroundColor: "var(--color-surface)",
           borderRadius: "var(--radius-md)",
           padding: "2rem",
-          maxWidth: "800px",
+          maxWidth: "600px",
           width: "100%",
           maxHeight: "90vh",
           overflowY: "auto",
@@ -97,7 +118,7 @@ export default function PurchaseEntryDetail({
               color: "var(--color-text-primary)",
             }}
           >
-            Detalle de Entrada de Compra
+            Detalle del Gasto
           </h2>
           <button
             onClick={onClose}
@@ -140,16 +161,104 @@ export default function PurchaseEntryDetail({
           </div>
         )}
 
-        {/* Entry Details */}
-        {entry && !loading && (
+        {/* Expense Details */}
+        {expense && !loading && (
           <>
-            {/* Summary */}
+            {/* Category Badge and Amount */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: "1.5rem",
+                padding: "1.5rem",
+                backgroundColor: "var(--color-bg)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 1rem",
+                    backgroundColor: getCategoryColor(expense.category_code),
+                    color: "white",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    textTransform: "uppercase",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  {expense.category_name || expense.category_code || "Sin categoría"}
+                </span>
+                {expense.reference && (
+                  <p
+                    style={{
+                      margin: "0.5rem 0 0 0",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "0.875rem",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    Ref: {expense.reference}
+                  </p>
+                )}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p
+                  style={{
+                    margin: "0 0 0.25rem 0",
+                    color: "var(--color-text-muted)",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  Monto
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "2rem",
+                    fontWeight: "bold",
+                    color: "var(--color-danger)",
+                  }}
+                >
+                  {formatCurrency(expense.amount)}
+                </p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <p
+                style={{
+                  margin: "0 0 0.5rem 0",
+                  color: "var(--color-text-muted)",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                }}
+              >
+                Descripción
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "1.1rem",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {expense.description}
+              </p>
+            </div>
+
+            {/* Info Grid */}
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                 gap: "1.5rem",
-                marginBottom: "2rem",
+                marginBottom: "1.5rem",
                 padding: "1.5rem",
                 backgroundColor: "var(--color-bg)",
                 borderRadius: "var(--radius-sm)",
@@ -164,41 +273,21 @@ export default function PurchaseEntryDetail({
                     fontSize: "0.875rem",
                   }}
                 >
-                  Proveedor
+                  Fecha del Gasto
                 </p>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "1.1rem",
+                    fontSize: "1rem",
                     fontWeight: "600",
                     color: "var(--color-text-primary)",
                   }}
                 >
-                  {entry.supplier_name || "Desconocido"}
+                  {formatDate(expense.expense_date)}
                 </p>
               </div>
-              <div>
-                <p
-                  style={{
-                    margin: "0 0 0.25rem 0",
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  Fecha de Entrada
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "1.1rem",
-                    fontWeight: "600",
-                    color: "var(--color-text-primary)",
-                  }}
-                >
-                  {formatDate(entry.entry_date)}
-                </p>
-              </div>
-              {entry.invoice_reference && (
+
+              {expense.supplier_name && (
                 <div>
                   <p
                     style={{
@@ -207,21 +296,21 @@ export default function PurchaseEntryDetail({
                       fontSize: "0.875rem",
                     }}
                   >
-                    Referencia de Factura
+                    Proveedor
                   </p>
                   <p
                     style={{
                       margin: 0,
-                      fontSize: "1.1rem",
+                      fontSize: "1rem",
                       fontWeight: "600",
                       color: "var(--color-text-primary)",
-                      fontFamily: "monospace",
                     }}
                   >
-                    {entry.invoice_reference}
+                    {expense.supplier_name}
                   </p>
                 </div>
               )}
+
               <div>
                 <p
                   style={{
@@ -230,26 +319,26 @@ export default function PurchaseEntryDetail({
                     fontSize: "0.875rem",
                   }}
                 >
-                  Total
+                  Fecha de Registro
                 </p>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: "1.25rem",
-                    fontWeight: "bold",
-                    color: "var(--color-success)",
+                    fontSize: "1rem",
+                    fontWeight: "600",
+                    color: "var(--color-text-primary)",
                   }}
                 >
-                  {formatCurrency(entry.total_amount)}
+                  {formatDateTime(expense.created_at)}
                 </p>
               </div>
             </div>
 
             {/* Notes */}
-            {entry.notes && (
+            {expense.notes && (
               <div
                 style={{
-                  marginBottom: "2rem",
+                  marginBottom: "1.5rem",
                   padding: "1rem",
                   backgroundColor: "var(--color-bg)",
                   borderRadius: "var(--radius-sm)",
@@ -270,18 +359,19 @@ export default function PurchaseEntryDetail({
                   style={{
                     margin: 0,
                     color: "var(--color-text-secondary)",
+                    whiteSpace: "pre-wrap",
                   }}
                 >
-                  {entry.notes}
+                  {expense.notes}
                 </p>
               </div>
             )}
 
             {/* Documents */}
-            {(entry.pdf_storage_path || entry.xml_storage_path) && (
+            {(expense.pdf_storage_path || expense.xml_storage_path) && (
               <div
                 style={{
-                  marginBottom: "2rem",
+                  marginBottom: "1.5rem",
                   padding: "1rem",
                   backgroundColor: "var(--color-bg)",
                   borderRadius: "var(--radius-sm)",
@@ -299,21 +389,20 @@ export default function PurchaseEntryDetail({
                   Documentos Adjuntos
                 </p>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {entry.pdf_storage_path && (
+                  {expense.pdf_storage_path && (
                     <span
                       style={{
                         padding: "0.5rem 1rem",
-                        backgroundColor: "var(--color-danger-light)",
-                        color: "var(--color-danger)",
+                        backgroundColor: "var(--color-primary-light)",
+                        color: "var(--color-primary)",
                         borderRadius: "var(--radius-sm)",
                         fontSize: "0.875rem",
-                        fontWeight: "600",
                       }}
                     >
-                      PDF adjunto
+                      PDF
                     </span>
                   )}
-                  {entry.xml_storage_path && (
+                  {expense.xml_storage_path && (
                     <span
                       style={{
                         padding: "0.5rem 1rem",
@@ -321,168 +410,13 @@ export default function PurchaseEntryDetail({
                         color: "var(--color-success)",
                         borderRadius: "var(--radius-sm)",
                         fontSize: "0.875rem",
-                        fontWeight: "600",
                       }}
                     >
-                      XML adjunto
+                      XML
                     </span>
                   )}
                 </div>
               </div>
-            )}
-
-            {/* Items Table */}
-            <h3
-              style={{
-                margin: "0 0 1rem 0",
-                fontSize: "1.1rem",
-                fontWeight: "600",
-                color: "var(--color-text-primary)",
-              }}
-            >
-              Productos Recibidos
-            </h3>
-            {entry.items && entry.items.length > 0 ? (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                }}
-              >
-                <thead>
-                  <tr
-                    style={{
-                      borderBottom: "2px solid var(--color-border)",
-                    }}
-                  >
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "0.75rem",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Producto
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "right",
-                        padding: "0.75rem",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Cantidad
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "right",
-                        padding: "0.75rem",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Costo Unit.
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "right",
-                        padding: "0.75rem",
-                        color: "var(--color-text-secondary)",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                      }}
-                    >
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entry.items.map((item) => (
-                    <tr
-                      key={item.id}
-                      style={{
-                        borderBottom: "1px solid var(--color-border)",
-                      }}
-                    >
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--color-text-primary)",
-                        }}
-                      >
-                        {item.product_name || item.product_id}
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--color-text-primary)",
-                          textAlign: "right",
-                        }}
-                      >
-                        {item.quantity}
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--color-text-primary)",
-                          textAlign: "right",
-                        }}
-                      >
-                        {formatCurrency(item.unit_cost)}
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--color-text-primary)",
-                          textAlign: "right",
-                          fontWeight: "600",
-                        }}
-                      >
-                        {formatCurrency(item.total_cost)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr
-                    style={{
-                      borderTop: "2px solid var(--color-border)",
-                    }}
-                  >
-                    <td
-                      colSpan={3}
-                      style={{
-                        padding: "0.75rem",
-                        textAlign: "right",
-                        fontWeight: "600",
-                        color: "var(--color-text-primary)",
-                      }}
-                    >
-                      Total General:
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.75rem",
-                        textAlign: "right",
-                        fontWeight: "bold",
-                        fontSize: "1.1rem",
-                        color: "var(--color-success)",
-                      }}
-                    >
-                      {formatCurrency(entry.total_amount)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            ) : (
-              <p style={{ color: "var(--color-text-secondary)" }}>
-                No hay items en esta entrada.
-              </p>
             )}
           </>
         )}
