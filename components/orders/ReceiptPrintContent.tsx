@@ -3,21 +3,11 @@
 import { forwardRef } from "react";
 import type { OpenBillWithProducts } from "@/types/order";
 import { calculateReceiptTotals, groupBillProducts } from "@/lib/orders/receipt";
+import { formatDateTime } from "@/lib/format";
 
 interface ReceiptPrintContentProps {
   openBill: OpenBillWithProducts;
 }
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleString("es-CO", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
 
 /**
  * The thermal-receipt markup used for browser printing (the class names map to
@@ -37,7 +27,7 @@ const ReceiptPrintContent = forwardRef<HTMLDivElement, ReceiptPrintContentProps>
           <div className="bill-number">
             Factura - {openBill.temporal_identifier}
           </div>
-          <div className="date">{formatDate(openBill.created_at)}</div>
+          <div className="date">{formatDateTime(openBill.created_at)}</div>
           {openBill.created_by && (
             <div className="date">Served by: {openBill.created_by.name}</div>
           )}
