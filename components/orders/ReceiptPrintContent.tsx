@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import ReceiptFooter from "./ReceiptFooter";
 import type { OpenBillWithProducts } from "@/types/order";
 import { calculateReceiptTotals, groupBillProducts } from "@/lib/orders/receipt";
 import { formatDateTime } from "@/lib/format";
@@ -70,10 +71,7 @@ const ReceiptPrintContent = forwardRef<HTMLDivElement, ReceiptPrintContentProps>
           </div>
         </div>
 
-        <div className="footer">
-          <div>¡Gracias por su visita!</div>
-          <div>Laguna Escondida</div>
-        </div>
+        <ReceiptFooter />
       </div>
     );
   },

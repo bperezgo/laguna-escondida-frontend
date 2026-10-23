@@ -11,6 +11,7 @@ import { PERMISSIONS, usePermissions } from "@/lib/permissions";
 import { canOverrideItemLock, isItemPastGrace } from "@/lib/orders/itemLock";
 import { fuzzyFilter } from "@/lib/search/fuzzy";
 import { Button, Input, Textarea } from "@/components/ui";
+import ReceiptFooter from "./ReceiptFooter";
 import {
   ProductCard,
   OrderLineItem,
@@ -780,10 +781,7 @@ export default function EditOrderForm({
             <span>${printTotals.total.toFixed(2)}</span>
           </div>
         </div>
-        <div className="footer">
-          <div>Gracias por su visita!</div>
-          <div>Laguna Escondida</div>
-        </div>
+        <ReceiptFooter />
       </div>
     </div>
   );
