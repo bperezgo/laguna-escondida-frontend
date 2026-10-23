@@ -81,3 +81,29 @@ test("todayInBusinessTz uses the Bogotá calendar day", () => {
   assert.equal(todayInBusinessTz(new Date("2026-10-23T03:00:00Z")), "2026-10-22");
   assert.equal(todayInBusinessTz(new Date("2026-10-23T06:00:00Z")), "2026-10-23");
 });
+
+test("setFormatSettings switches currency, locale and time zone", async (t) => {
+  const { setFormatSettings, resetFormatSettings } = await import("./format.ts");
+  t.after(resetFormatSettings);
+
+  setFormatSettings({ locale: "en-US", currency: "USD", timeZone: "America/New_York" });
+  assert.equal(formatMoney(1500), "$1,500");
+  assert.equal(todayInBusinessTz(new Date("2026-10-23T03:30:00Z")), "2026-10-22");
+
+  resetFormatSettings();
+  assert.equal(formatMoney(1500), legacyMoney(1500));
+});
+
+test("setFormatSettings keeps the default for a value Intl rejects", async (t) => {
+  const { setFormatSettings, resetFormatSettings, formatSettings } = await import(
+    "./format.ts"
+  );
+  t.after(resetFormatSettings);
+
+  setFormatSettings({ locale: "not a locale!", currency: "XX", timeZone: "Mars/Base" });
+  assert.deepEqual(formatSettings, {
+    locale: "es-CO",
+    currency: "COP",
+    timeZone: "America/Bogota",
+  });
+});

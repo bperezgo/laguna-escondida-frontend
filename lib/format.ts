@@ -1,11 +1,51 @@
 // The one place that knows the business's locale, currency and time zone.
-// Today these are Laguna Escondida's; with multi-tenancy they come from the
-// signed-in organization (ai-plan/multi-tenancy/README.md, phase 1).
-export const formatSettings = {
+// The defaults are Laguna Escondida's (used on the sign-in page and while the
+// session loads); OrganizationBranding switches them to the signed-in
+// organization's with setFormatSettings.
+const DEFAULT_SETTINGS = {
   locale: "es-CO",
   currency: "COP",
   timeZone: "America/Bogota",
 };
+
+export const formatSettings = { ...DEFAULT_SETTINGS };
+
+const isValid = (build: () => unknown) => {
+  try {
+    build();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Switches formatting to the signed-in organization's settings. A value Intl
+// rejects keeps the default rather than breaking every screen. Call it only in
+// the browser: on the server this module is shared by every request.
+export function setFormatSettings(settings: {
+  locale: string;
+  currency: string;
+  timeZone: string;
+}): void {
+  const { locale, currency, timeZone } = settings;
+  formatSettings.locale = isValid(() => new Intl.NumberFormat(locale))
+    ? locale
+    : DEFAULT_SETTINGS.locale;
+  formatSettings.currency = isValid(
+    () => new Intl.NumberFormat("en", { style: "currency", currency })
+  )
+    ? currency
+    : DEFAULT_SETTINGS.currency;
+  formatSettings.timeZone = isValid(
+    () => new Intl.DateTimeFormat("en", { timeZone })
+  )
+    ? timeZone
+    : DEFAULT_SETTINGS.timeZone;
+}
+
+export function resetFormatSettings(): void {
+  Object.assign(formatSettings, DEFAULT_SETTINGS);
+}
 
 type DateInput = string | number | Date;
 

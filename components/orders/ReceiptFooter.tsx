@@ -1,17 +1,17 @@
+"use client";
+
+import { useOrganization } from "@/lib/permissions";
+import { receiptFooterLines } from "@/lib/organization";
+
 // Closing lines of the browser-printed receipt (class names map to
-// `invoicePrintStyles`). Shared by ReceiptPrintContent and EditOrderForm's
-// print copy; with multi-tenancy the lines come from the organization.
-const DEFAULT_LINES = ["¡Gracias por su visita!", "Laguna Escondida"];
-
-interface ReceiptFooterProps {
-  lines?: string[];
-}
-
-export default function ReceiptFooter({ lines = DEFAULT_LINES }: ReceiptFooterProps) {
+// `invoicePrintStyles`): the organization's footer text, name, NIT, address and
+// legal notice. Shared by ReceiptPrintContent and EditOrderForm's print copy.
+export default function ReceiptFooter() {
+  const lines = receiptFooterLines(useOrganization());
   return (
     <div className="footer">
-      {lines.map((line) => (
-        <div key={line}>{line}</div>
+      {lines.map((line, i) => (
+        <div key={i}>{line}</div>
       ))}
     </div>
   );
